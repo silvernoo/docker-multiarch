@@ -18,7 +18,7 @@ steps:
       DOCKER_PASSWORD:
         from_secret: docker_password
     commands:
-      # - dockerd-entrypoint.sh --dns 192.168.0.10 &
+      - dockerd-entrypoint.sh --dns 192.168.0.10 &
       - sleep 5
       - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
       - docker buildx create --name multiarch --use || true
