@@ -8,19 +8,6 @@ platform:
   arch: amd64
 
 steps:
-  # 步骤1: 设置 Docker Buildx
-  - name: setup-buildx
-    image: docker:dind
-    privileged: true
-    commands:
-      - dockerd-entrypoint.sh &
-      - sleep 5
-      - docker buildx create --name multiarch --use
-      - docker buildx inspect --bootstrap
-    volumes:
-      - name: docker
-        path: /var/lib/docker
-
   # 步骤2: 构建并推送多平台镜像
   - name: build-and-push
     image: docker:dind
@@ -43,32 +30,7 @@ steps:
           --tag $DOCKER_USERNAME/your-app:${DRONE_COMMIT_SHA:0:8} \
           --push \
           -f /test/Dockerfile test/
-    volumes:
-      - name: docker
-        path: /var/lib/docker
-    depends_on:
-      - setup-buildx
-
-  # 步骤3: 清理
-  - name: cleanup
-    image: docker:dind
-    privileged: true
-    commands:
       - docker buildx rm multiarch || true
-    volumes:
-      - name: docker
-        path: /var/lib/docker
-    depends_on:
-      - build-and-push
-    when:
-      status:
-        - success
-        - failure
-
-# 定义卷
-volumes:
-  - name: docker
-    temp: {}
 
 # 触发条件
 trigger:
