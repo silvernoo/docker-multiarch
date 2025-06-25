@@ -1,32 +1,80 @@
 kind: pipeline
 type: docker
-name: default
+name: multi-platform-build
+
+# 配置运行环境
+platform:
+  os: linux
+  arch: amd64
 
 steps:
-  - name: setup qemu
-    image: docker/setup-qemu
+  # 步骤1: 设置 Docker Buildx
+  - name: setup-buildx
+    image: docker:dind
     privileged: true
     commands:
-      - -- platforms=linux/amd64,linux/arm64
-
-  - name: setup buildx
-    image: docker/setup-buildx-action
-    privileged: true
-
-  - name: login to docker
-    image: docker
-    commands:
-      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-  - name: build and push
-    image: docker
-    environment:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    commands:
-      - docker buildx create --use
+      - dockerd-entrypoint.sh &
+      - sleep 5
+      - docker buildx create --name multiarch --driver docker-container --use
       - docker buildx inspect --bootstrap
-      - docker buildx build \
-          --platform linux/amd64,linux/arm64 \
-          -t $DOCKER_USERNAME/your-image-name:latest -f test/Dockerfile \
+    volumes:
+      - name: docker
+        path: /var/lib/docker
+
+  # 步骤2: 构建并推送多平台镜像
+  - name: build-and-push
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+    commands:
+      - dockerd-entrypoint.sh &
+      - sleep 5
+      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+      - docker buildx create --name multiarch --driver docker-container --use || true
+      - docker buildx inspect --bootstrap
+      - |
+        docker buildx build \
+          --platform linux/amd64,linux/arm64,linux/arm/v7 \
+          --tag $DOCKER_USERNAME/your-app:latest \
+          --tag $DOCKER_USERNAME/your-app:${DRONE_COMMIT_SHA:0:8} \
           --push \
-          test/
+          -f /test/Dockerfile test/
+    volumes:
+      - name: docker
+        path: /var/lib/docker
+    depends_on:
+      - setup-buildx
+
+  # 步骤3: 清理
+  - name: cleanup
+    image: docker:dind
+    privileged: true
+    commands:
+      - docker buildx rm multiarch || true
+    volumes:
+      - name: docker
+        path: /var/lib/docker
+    depends_on:
+      - build-and-push
+    when:
+      status:
+        - success
+        - failure
+
+# 定义卷
+volumes:
+  - name: docker
+    temp: {}
+
+# 触发条件
+trigger:
+  branch:
+    - main
+    - master
+  event:
+    - push
+    - tag
