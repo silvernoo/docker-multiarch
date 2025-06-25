@@ -1,116 +1,32 @@
 kind: pipeline
 type: docker
-name: cross-platform-build
-
-# 使用特权模式的 docker-in-docker
-services:
-  - name: docker
-    image: docker:latest
-    privileged: true
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
+name: default
 
 steps:
-  # 1. 准备 buildx 环境
-  - name: prepare-buildx
-    image: docker:latest
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
+  - name: setup qemu
+    image: docker/setup-qemu
+    privileged: true
     commands:
-      - sleep 5  # 等待 dind 服务启动
-      - docker version
-      - docker buildx version
-      - docker buildx create --name mybuilder --use
+      - -- platforms=linux/amd64,linux/arm64
+
+  - name: setup buildx
+    image: docker/setup-buildx-action
+    privileged: true
+
+  - name: login to docker
+    image: docker
+    commands:
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+  - name: build and push
+    image: docker
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    commands:
+      - docker buildx create --use
       - docker buildx inspect --bootstrap
-    depends_on: []
-
-  # 2. 登录 Docker Hub
-  - name: docker-login
-    image: docker:latest
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
-    environment:
-      DOCKER_USERNAME:
-        from_secret: docker_username
-      DOCKER_PASSWORD:
-        from_secret: docker_password
-    commands:
-      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-    depends_on:
-      - prepare-buildx
-
-  # 3. 构建并推送多架构镜像
-  - name: build-and-push
-    image: docker:latest
-    volumes:
-      - name: docker-sock
-        path: /var/run/docker.sock
-    environment:
-      IMAGE_NAME: matosama/multiarch-app  # 替换为你的镜像名
-    commands:
-      - |
-        docker buildx build -f /test/Dockerfile \
-          --platform linux/amd64,linux/arm64,linux/arm/v7,linux/386 \
-          --tag $IMAGE_NAME:latest \
-          --tag $IMAGE_NAME:$DRONE_COMMIT_SHA \
+      - docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          -t $DOCKER_USERNAME/your-image-name:latest -f test/Dockerfile \
           --push \
-          ./test/
-    depends_on:
-      - docker-login
-    when:
-      branch:
-        - main
-        - master
-
-  # 4. 推送带标签的版本
-  # - name: build-and-push-tag
-  #   image: docker:latest
-  #   volumes:
-  #     - name: docker-sock
-  #       path: /var/run/docker.sock
-  #   environment:
-  #     IMAGE_NAME: your-username/your-app  # 替换为你的镜像名
-  #   commands:
-  #     - |
-  #       docker buildx build \
-  #         --platform linux/amd64,linux/arm64,linux/arm/v7 \
-  #         --tag $IMAGE_NAME:$DRONE_TAG \
-  #         --push \
-  #         .
-  #   depends_on:
-  #     - docker-login
-  #   when:
-  #     event:
-  #       - tag
-
-volumes:
-  - name: docker-sock
-    temp: {}
-
-# ---
-# # 可选：添加通知步骤
-# kind: pipeline
-# type: docker
-# name: notification
-
-# steps:
-#   - name: notify
-#     image: plugins/webhook
-#     settings:
-#       urls:
-#         from_secret: webhook_url
-#       content_type: application/json
-#       template: |
-#         {
-#           "text": "Docker build completed for {{ build.repo.name }} - {{ build.status }}"
-#         }
-#     when:
-#       status:
-#         - success
-#         - failure
-
-# depends_on:
-#   - cross-platform-build
+          test/
