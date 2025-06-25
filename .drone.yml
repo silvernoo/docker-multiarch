@@ -15,7 +15,7 @@ steps:
     commands:
       - dockerd-entrypoint.sh &
       - sleep 5
-      - docker buildx create --name multiarch --driver docker-container --use
+      - docker buildx create --name multiarch --use
       - docker buildx inspect --bootstrap
     volumes:
       - name: docker
@@ -34,7 +34,7 @@ steps:
       - dockerd-entrypoint.sh &
       - sleep 5
       - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-      - docker buildx create --name multiarch --driver docker-container --use || true
+      - docker buildx create --name multiarch --use || true
       - docker buildx inspect --bootstrap
       - |
         docker buildx build \
