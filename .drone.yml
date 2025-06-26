@@ -18,10 +18,10 @@ steps:
       DOCKER_PASSWORD:
         from_secret: docker_password
     commands:
-      - dockerd-entrypoint.sh --dns 192.168.0.10 --insecure-registry 192.168.0.10:8023 &
+      - dockerd-entrypoint.sh --dns 192.168.0.10 &
       - sleep 5
       - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-      - docker pull 192.168.0.10:8023/moby/buildkit:buildx-stable-1
+      - docker pull moby/buildkit:buildx-stable-1
       - docker buildx create --name multiarch --use || true
       - docker buildx inspect --bootstrap
       - |
