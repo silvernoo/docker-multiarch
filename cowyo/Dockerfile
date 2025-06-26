@@ -1,4 +1,4 @@
-FROM golang:1.12-alpine as builder
+FROM golang:1.12-alpine AS builder
 RUN apk add --no-cache git make 
 RUN go get -v github.com/jteeuwen/go-bindata/go-bindata
 WORKDIR /go/cowyo
