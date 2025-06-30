@@ -26,6 +26,7 @@ jobs:
       env: 
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
+        docker run --rm --privileged tonistiigi/binfmt --install all
         docker buildx create --name multiarch --use || true
         docker buildx inspect --bootstrap
         docker buildx build \
