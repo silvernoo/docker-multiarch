@@ -33,7 +33,7 @@ steps:
           -f cowyo/Dockerfile cowyo/
         
         docker buildx build \
-          --platform linux/amd64,linux/386,linux/arm64,linux/arm/v7 \
+          --platform linux/amd64,linux/arm64,linux/arm/v7 \
           --tag $DOCKER_USERNAME/gemini-cli:latest \
           --tag $DOCKER_USERNAME/gemini-cli:${DRONE_COMMIT_SHA:0:8} \
           --push \
