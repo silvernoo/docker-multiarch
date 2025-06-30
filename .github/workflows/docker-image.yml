@@ -48,9 +48,9 @@ jobs:
           --push \
           -f cowyo/Dockerfile cowyo/
         
-        # docker buildx build \
-        #   --platform linux/amd64,linux/arm64,linux/arm/v7 \
-        #   --tag $DOCKER_USERNAME/gemini-cli:latest \
-        #   --tag $DOCKER_USERNAME/gemini-cli:${{ steps.vars.outputs.sha_short }} \
-        #   --push \
-        #   -f gemini-cli/Dockerfile gemini-cli/
+        docker buildx build \
+          --platform linux/amd64,linux/arm64,linux/arm/v7 \
+          --tag $DOCKER_USERNAME/gemini-cli:latest \
+          --tag $DOCKER_USERNAME/gemini-cli:${{ steps.vars.outputs.sha_short }} \
+          --push \
+          -f gemini-cli/Dockerfile gemini-cli/
