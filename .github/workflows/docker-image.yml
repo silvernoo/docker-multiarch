@@ -12,24 +12,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      env:
-        DOCKER_PASSWORD: ${{ env.DOCKER_PASSWORD }}
-        DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
       run: |
-        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        echo $${{ env.DOCKER_PASSWORD }} | docker login -u ${{ env.DOCKER_USERNAME }} --password-stdin
         docker buildx create --name multiarch --use || true
         docker buildx inspect --bootstrap
         docker buildx build \
           --platform linux/amd64,linux/386,linux/arm64,linux/arm/v7 \
-          --tag $DOCKER_USERNAME/cowyo:latest \
-          --tag $DOCKER_USERNAME/cowyo:${github.sha:0:8} \
+          --tag ${{ env.DOCKER_USERNAME }}/cowyo:latest \
+          --tag ${{ env.DOCKER_USERNAME }}/cowyo:${github.sha:0:8} \
           --push \
           -f cowyo/Dockerfile cowyo/
         
         # docker buildx build \
         #   --platform linux/amd64,linux/arm64,linux/arm/v7 \
-        #   --tag $DOCKER_USERNAME/gemini-cli:latest \
-        #   --tag $DOCKER_USERNAME/gemini-cli:${github.sha:0:8} \
+        #   --tag ${{ env.DOCKER_USERNAME }}/gemini-cli:latest \
+        #   --tag ${{ env.DOCKER_USERNAME }}/gemini-cli:${github.sha:0:8} \
         #   --push \
         #   -f gemini-cli/Dockerfile gemini-cli/
         docker buildx rm multiarch || true
