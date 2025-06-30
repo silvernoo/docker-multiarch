@@ -18,6 +18,10 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
     - name: Build the Docker image
       run: |
         docker buildx create --name multiarch --use || true
@@ -25,14 +29,14 @@ jobs:
         docker buildx build \
           --platform linux/amd64,linux/386,linux/arm64,linux/arm/v7 \
           --tag ${{ env.DOCKER_USERNAME }}/cowyo:latest \
-          --tag ${{ env.DOCKER_USERNAME }}/cowyo:${github.sha:0:8} \
+          --tag ${{ env.DOCKER_USERNAME }}/cowyo:${{ steps.vars.outputs.sha_short }} \
           --push \
           -f cowyo/Dockerfile cowyo/
         
         # docker buildx build \
         #   --platform linux/amd64,linux/arm64,linux/arm/v7 \
         #   --tag ${{ env.DOCKER_USERNAME }}/gemini-cli:latest \
-        #   --tag ${{ env.DOCKER_USERNAME }}/gemini-cli:${github.sha:0:8} \
+        #   --tag ${{ env.DOCKER_USERNAME }}/gemini-cli:${{ steps.vars.outputs.sha_short }} \
         #   --push \
         #   -f gemini-cli/Dockerfile gemini-cli/
         docker buildx rm multiarch || true
