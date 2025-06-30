@@ -12,6 +12,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v3
+
+    # (可选) 步骤 3: 检查 Buildx 构建器平台
+    # 这个步骤可以验证 Buildx 是否已正确设置，你会看到 arm64 出现在列表中。
+    - name: Inspect builder
+      run: |
+        echo "Builder instance details:"
+        docker buildx inspect ${{ steps.buildx.outputs.name }}
+
     - name: Log in to Docker Hub
       uses: docker/login-action@v3 # 使用一个较新版本
       with:
@@ -26,9 +41,6 @@ jobs:
       env: 
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
-        docker run --rm --privileged tonistiigi/binfmt --install all
-        docker buildx create --name multiarch --use || true
-        docker buildx inspect --bootstrap
         docker buildx build \
           --platform linux/amd64,linux/386,linux/arm64,linux/arm/v7 \
           --tag $DOCKER_USERNAME/cowyo:latest \
@@ -42,4 +54,3 @@ jobs:
         #   --tag $DOCKER_USERNAME/gemini-cli:${{ steps.vars.outputs.sha_short }} \
         #   --push \
         #   -f gemini-cli/Dockerfile gemini-cli/
-        docker buildx rm multiarch || true
